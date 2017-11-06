@@ -6,13 +6,14 @@ module.exports = function (router) {
 
     // get request
     taskRoute.get(function (req, res) {
-// handle query string
-        if(req.query != {}){
+
+        // handle query string
+        if(req.query){
             let where;
             let sort;
             let select;
             let skip = parseInt(req.query.skip)||0;
-            let limit = parseInt(req.query.limit)||Number.MAX_SAFE_INTEGER;
+            let limit = parseInt(req.query.limit)||100;
             let count = req.query.count||false;
             
             // parse string to JSON
@@ -36,7 +37,7 @@ module.exports = function (router) {
             }
 
 
-            console.log(sort);
+            //console.log(sort);
             res.status(200);
             //res.send("I am testing!");
             
@@ -68,10 +69,10 @@ module.exports = function (router) {
                 select(select).
                 exec(function(err, tasks){
                     if(err){
-                        res.status(500).json({message:"Server error", data:[]});
+                        res.status(500).json({message:err, data:[]});
                     }
                     else{
-                        res.json({message:'OK!',data:tasks});
+                        res.status(200).json({message:'OK!',data:tasks});
                     }
                 });
             }
@@ -81,7 +82,10 @@ module.exports = function (router) {
 
         // default behavior
         else{
-            Task.find(function(err, tasks){
+            Task.
+            find().
+            limit(100).
+            exec(function(err, tasks){
                 if(err){
                     res.status(500).json({message:"Server error", data:[]});
                 }

@@ -8,7 +8,7 @@ module.exports = function (router) {
     userRoute.get(function (req, res) {
         
         // handle query string
-        if(req.query != {}){
+        if(req.query){
             let where;
             let sort;
             let select;
@@ -37,7 +37,7 @@ module.exports = function (router) {
             }
 
 
-            console.log(sort);
+            //console.log(sort);
             res.status(200);
             //res.send("I am testing!");
             
