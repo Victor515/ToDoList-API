@@ -43,6 +43,20 @@ module.exports = function (router) {
             
             // if a count should be returned
             if(count){
+                User.
+                count(where).
+                skip(skip).
+                limit(limit).
+                sort(sort).
+                select(select).
+                exec(function(err, counts){
+                    if(err){
+                        res.status(500).json({message:"Server error", data:[]});
+                    }
+                    else{
+                        res.json({message:'OK!',data:counts});
+                    }
+                });
 
             }
 
@@ -80,17 +94,36 @@ module.exports = function (router) {
 
     // post request
     userRoute.post(function (req, res) {
-        let user = new User();
+        
+        if(!req.body.name || !req.body.email){
+            // if name or email does not exist
+            res.status(400).json({message:'User cannot be created without name or email', data:[]});
+        }
 
-        user.name = req.body.name;
-        user.email = req.body.email;
+        else{
+            let name = req.body.name;
+            let email = req.body.email;
+            let pendingTasks = req.body.pendingTasks||[];
 
-        user.save(function(err) {
-            if (err)
-                res.status(500).json({message:"Server error", data:[]});
+            let user = new User();
+            user.name = name;
+            user.email = email;
+            user.pendingTasks = pendingTasks;
 
-            res.status(201).json({ message: 'User created!', data:user });
-        });
+            user.save(function(err) {
+                if (err){
+                    if(err.code == 11000){
+                        // duplicate email
+                        return res.status(400).json({message:'Email already in use', data:[]});
+                    }
+                    else{
+                        return res.status(500).json({message:"Server error", data:[]});
+                    }
+                }
+
+                res.status(201).json({ message: 'User created!', data:user });
+            });
+        }
     });
 
     // options request
@@ -143,19 +176,33 @@ module.exports = function (router) {
             }
 
             else{
-                // update user info here
-                user.name = req.body.name||user.name;
-                user.email = req.body.email||user.email;
-                user.pendingTasks = req.body.pendingTasks||user.pendingTasks;
+                
+                if(!req.body.name || !req.body.email){
+                    // if name or email does not exist
+                    res.status(400).json({message:'User cannot be created without name or email', data:[]});
+                }
 
-                // save the bear
-                user.save(function(err) {
-                    if (err){
-                        res.json({message:'Cannot modify the user with given ID', data:[]});
-                    }
+                else{
 
-                res.status(200).json({ message: 'User updated!', data:user });
-                });
+                    // update user info here
+                    user.name = req.body.name||user.name;
+                    user.email = req.body.email||user.email;
+                    user.pendingTasks = req.body.pendingTasks||user.pendingTasks;
+
+                    // save the updated info
+                    user.save(function(err) {
+                        if (err){
+                            if(err.code == 11000){
+                                return res.status(400).json({message:'Email already in use', data:[]});
+                            }
+                            else{
+                                return res.status(500).json({message:'Cannot modify the user with given ID', data:[]});
+                            }
+                        }
+
+                        res.status(200).json({ message: 'User updated!', data:user });
+                    });
+                }
             }
 
         });

@@ -6,34 +6,120 @@ module.exports = function (router) {
 
     // get request
     taskRoute.get(function (req, res) {
-        Task.find(function(err, tasks){
-            if(err){
-                res.json({message:'Cannot get tasks', data:[]});
+// handle query string
+        if(req.query != {}){
+            let where;
+            let sort;
+            let select;
+            let skip = parseInt(req.query.skip)||0;
+            let limit = parseInt(req.query.limit)||Number.MAX_SAFE_INTEGER;
+            let count = req.query.count||false;
+            
+            // parse string to JSON
+            if(req.query.where != undefined){
+                where = JSON.parse(req.query.where);
+            }
+            else{
+                where = {};
+            }
+            if(req.query.sort != undefined){
+                sort = JSON.parse(req.query.sort);
+            }
+            else{
+                sort = {};
+            }
+            if(req.query.select != undefined){
+                select = JSON.parse(req.query.select);
+            }
+            else{
+                select = {};
             }
 
-            res.json({message:'OK!', data:tasks});
-        })
+
+            console.log(sort);
+            res.status(200);
+            //res.send("I am testing!");
+            
+            // if a count should be returned
+            if(count){
+                Task.
+                count(where).
+                skip(skip).
+                limit(limit).
+                sort(sort).
+                select(select).
+                exec(function(err, counts){
+                    if(err){
+                        res.status(500).json({message:"Server error", data:[]});
+                    }
+                    else{
+                        res.json({message:'OK!',data:counts});
+                    }
+                });
+
+            }
+
+            else{
+                Task.
+                find(where).
+                skip(skip).
+                limit(limit).
+                sort(sort).
+                select(select).
+                exec(function(err, tasks){
+                    if(err){
+                        res.status(500).json({message:"Server error", data:[]});
+                    }
+                    else{
+                        res.json({message:'OK!',data:tasks});
+                    }
+                });
+            }
+
+
+        }
+
+        // default behavior
+        else{
+            Task.find(function(err, tasks){
+                if(err){
+                    res.status(500).json({message:"Server error", data:[]});
+                }
+
+                res.status(200).json({message:'OK!', data:tasks});
+            });
+        }
     });
 
     // post request
     taskRoute.post(function (req, res) {
-        let task = new Task();
+        if(!req.body.name || !req.body.deadline){
+            res.status(400).json({message:"Tasks cannot be created without a name or a deadline", data:[]});
+        }
 
-        task.name = req.body.name;
-        task.deadline = req.body.deadline;
+        else{
+            let task = new Task();
 
-        task.save(function(err) {
-            if (err)
-                res.json({message:'Cannot add the task', data:[]});
+            task.name = req.body.name;
+            task.deadline = req.body.deadline;
+            task.description = req.body.description;
+            task.completed = req.body.completed;
+            task.assignedUser = req.body.assignedUser;
+            task.assignedUserName = req.body.assignedUserName
 
-            res.json({ message: 'Task created!', data:task });
-        });
+            task.save(function(err) {
+                if (err)
+                    return res.status(500).json({message:'Server error', data:[]});
+
+                res.status(201).json({ message: 'Task created!', data:task });
+            });
+        }
     });
 
     // options request
     taskRoute.options(function (req, res) {
 
-        res.json({message: 'GET method can take parameters!',
+        res.status(200).json({message: 'GET method can take parameters!',
                   data: [{parameters:'where', description:'filter results based on JSON query'},
                          {parameters:'sort', description:'specify the order in which to sort each specified field (1- ascending; -1 - descending)'},
                          {parameters:'select', description:'specify the set of fields to include or exclude in each document (1 - include; 0 - exclude)'},
@@ -52,9 +138,16 @@ module.exports = function (router) {
 
        Task.findById(req.params.id, function(err, task) {
             if (err){
-                res.json({message:'Cannot find the task with given ID', data:[]});
+                res.status(500).json({message:'Server error', data:[]});
             }
-            res.json({message: 'OK!', data:task});
+
+            if(!task){
+                res.status(404).json({message:'Cannot find the task with given ID', data:[]});
+            }
+
+            else{
+                res.status(200).json({message: 'OK!', data:task});
+            }
         });
     });
 
@@ -64,26 +157,39 @@ module.exports = function (router) {
         Task.findById(req.params.id, function(err, task) {
 
             if (err){
-                res.json({message:'Cannot modify the task with given ID', data:[]});
+                res.status(500).json({message:'Server error', data:[]});
             }
 
-            // update info
-            task.name = req.body.name||task.name;
-            task.description = req.body.description||task.description;
-            task.deadline = req.body.deadline||task.deadline;
-            task.completed = req.body.completed||task.completed;
-            task.assignedUser = req.body.assignedUser||task.assignedUser;
-            task.assignedUserName = req.body.assignedUserName||task.assignedUserName;
+            // if we do not find the user
+            if(!task){
+                res.status(404).json({message:'Cannot find the task with given ID', data:[]});
+            }
 
-
-            // save the bear
-            task.save(function(err) {
-                if (err){
-                    res.json({message:'Cannot modify the task with given ID', data:[]});
+            else{
+                if(!req.body.name || !req.body.deadline){
+                    res.status(400).json({message:"Tasks cannot be updated without a name or a deadline", data:[]});
                 }
 
-                res.json({ message: 'task updated!', data:task });
-            });
+                else{
+                    // update info
+                    task.name = req.body.name||task.name;
+                    task.description = req.body.description||task.description;
+                    task.deadline = req.body.deadline||task.deadline;
+                    task.completed = req.body.completed||task.completed;
+                    task.assignedUser = req.body.assignedUser||task.assignedUser;
+                    task.assignedUserName = req.body.assignedUserName||task.assignedUserName;
+
+
+                    // save the task
+                    task.save(function(err) {
+                        if (err){
+                            return res.status(500).json({message:'Server error', data:[]});
+                        }
+
+                    res.status(200).json({ message: 'task updated!', data:task });
+                    });
+                }
+            }
 
         });
     });
@@ -91,13 +197,25 @@ module.exports = function (router) {
     // delete request
     taskidRoute.delete(function (req, res) {
 
-        Task.remove({
-            _id: req.params.id
-        }, function(err, task) {
-            if (err)
-                res.json({message:'Cannot delete the task with given ID', data:[]});
+        Task.findById(req.params.id, function(err, task) {
+            if(err){
+               res.status(500).json({message:"Server error", data:[]});
+            }
+            if(!task){
+                res.status(404).json({message:'Cannot find the tasks with given ID', data:[]});
+            }
 
-            res.json({ message: 'Successfully deleted', data:[] });
+            else{
+                Task.remove({
+                    _id: req.params.id
+                }, function(err, user) {
+                    if (err)
+                        res.status(500).json({message:"Server error", data:[]});
+
+                res.status(200).json({ message: 'Successfully deleted', data:[] });
+            });
+            }
+
         });
     });
 
