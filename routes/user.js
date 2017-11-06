@@ -8,7 +8,7 @@ module.exports = function (router) {
     userRoute.get(function (req, res) {
         
         // handle query string
-        if(req.query){
+        if(req.query.length === 0){
             let where;
             let sort;
             let select;
@@ -72,7 +72,12 @@ module.exports = function (router) {
                         res.status(500).json({message:"Server error", data:[]});
                     }
                     else{
-                        res.json({message:'OK!',data:users});
+                        if(users.length === 0){
+                            res.status(404).json({message:"No users found", data:users});
+                        }
+                        else{
+                            res.json({message:'OK!',data:users});
+                        }
                     }
                 });
             }
@@ -84,7 +89,7 @@ module.exports = function (router) {
         else{
             User.find(function(err, users){
                 if(err){
-                    res.status(500).json({message:"Server error", data:[]});
+                    return res.status(500).json({message:"Server error", data:[]});
                 }
 
                 res.status(200).json({message:'OK!', data:users});
