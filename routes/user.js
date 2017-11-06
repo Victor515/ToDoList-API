@@ -8,7 +8,7 @@ module.exports = function (router) {
     userRoute.get(function (req, res) {
         
         // handle query string
-        if(req.query.length === 0){
+        if(req.query.length !== 0){
             let where;
             let sort;
             let select;
