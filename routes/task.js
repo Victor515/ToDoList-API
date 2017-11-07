@@ -111,10 +111,10 @@ module.exports = function (router) {
 
             task.name = req.body.name;
             task.deadline = req.body.deadline;
-            task.description = req.body.description;
-            task.completed = req.body.completed;
-            task.assignedUser = req.body.assignedUser;
-            task.assignedUserName = req.body.assignedUserName
+            task.description = req.body.description||"";
+            task.completed = req.body.completed||false;
+            task.assignedUser = req.body.assignedUser||"default";
+            task.assignedUserName = req.body.assignedUserName||"unassigned";
 
             task.save(function(err) {
                 if (err)
